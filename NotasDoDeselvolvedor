@@ -1,0 +1,1 @@
+Esse projeto foi construido para ser integrado com qualquer outro sistema. Ele utiliza de eventos que ficam anexados a tabela TB_Whats ao receber um insert ele inicia um bloco de comandos para executar o envio de mensagens.
