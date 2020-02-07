@@ -48,8 +48,7 @@ namespace WpfApp1
         {
             while (true)
             {
-               // Console.WriteLine("Login to WhatsApp Web and Press Enter");
-              //  Console.ReadLine();
+             
 
                 if (CheckLoggedIn())
                     PrimeiroLogin = +1;
@@ -61,7 +60,10 @@ namespace WpfApp1
 
         }
      
-
+        /// <summary>
+        /// Checa se o whatsApp foi logado 
+        /// </summary>
+        /// <returns></returns>
         private bool CheckLoggedIn()
         {
             try
@@ -76,7 +78,9 @@ namespace WpfApp1
             }
 
         }
-
+        /// <summary>
+        /// Inicia uma pagina web no site o WhatsApp Web 
+        /// </summary>
         public void RunAgain()
         {
             int i = 1;
@@ -86,26 +90,44 @@ namespace WpfApp1
             
            
         }
-
+        /// <summary>
+        /// Utiliza da ferramenta Selenium para acessar o WhatsApp e enviar as mensagens 
+        /// </summary>
+        /// <param name="number"></param>
+        /// <param name="message"></param>
+        /// <param name="id"></param>
+        /// <returns></returns>
         private bool SendMessage(string number, string message, int id)
         {
+            /* Todo o fluxo tem de ser seguido de maneira correta para não interferir no envio das mensagens, por esse motivo foi necessário colocar
+            tantas verificações e try catch*/
             try
             {
-               
+                //Instância a Função wait que será utilizada posteriormente para aguardar as telas certas aparecerem
                 WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(20));
+
+                //Define uma função que espera um intervalo de tempo para a continuidade do código (Diferente da função Wait)
                 TimeSpan intervalo = new TimeSpan(0, 0, 5);
-               // wait.Until(ExpectedConditions.VisibilityOfAllElementsLocatedBy(By.Id("action-button")));
-                
+
+                //Espera qualquer coisa aparecer no navegador dentro de 10 segundos
                 driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(10); //Wait for maximun of 10 seconds if any element is not found
+
+                //Coloca a URL da API dos whats
                 driver.Navigate().GoToUrl("https://api.whatsapp.com/send?phone=" + number + "&text=" + Uri.EscapeDataString(message));
                 try
                 {
-                    Thread.Sleep(intervalo);
+
+                    Thread.Sleep(intervalo);// timer para o programa ir de forma mais lenta  
+
+                    //Essa função aguarda o componente do site está aparecendo para continuar, caso não esteja, será gerado uma exceção se será tratada
                     wait.Until(ExpectedConditions.VisibilityOfAllElementsLocatedBy(By.Id("action-button")));
+
+                    //Clica na opção apontada 
                     driver.FindElement(By.Id("action-button")).Click(); // Click SEND Buton
                 }
                 catch (Exception ex)
                 {
+                    // em caso se exceção
                     if (ex.Message.Equals("Timed out after 20 seconds"))
                     {
                         Thread.Sleep(intervalo);
@@ -115,6 +137,7 @@ namespace WpfApp1
                         {
                             msg.Connection.ConnectionString = MontaStringDeConexao(Properties.Settings.Default.ServerName, Properties.Settings.Default.ServerCatalog);
 
+                            // Grava o mensagem como não enviada por conta de algum erro 
                             msg.GravaMsgComErro(id);
                         }
                         return false;
@@ -122,7 +145,7 @@ namespace WpfApp1
 
                 } 
                 
-                
+                /* essas verficações são repetidas de maneira adaptada para cada tela */
                 try
                 {
                     Thread.Sleep(intervalo);
@@ -146,9 +169,7 @@ namespace WpfApp1
                     }
 
                 }
-                //wait.Until(ExpectedConditions.VisibilityOfAllElementsLocatedBy(By.XPath("//*[@id='fallback_block']/div/div/a")));
-                //driver.FindElement(By.XPath("//*[@id='fallback_block']/div/div/a")).Click();
-                //driver.Manage().Timeouts().PageLoad = TimeSpan.FromSeconds(1);
+                
 
                 try 
                 {
@@ -159,6 +180,7 @@ namespace WpfApp1
 
                     using (var msg = new TRI_PDV_WHATSTableAdapter())
                     {
+                        // Salva no registroque foi enviada corretamente
                         msg.GravaMsgComSucesso(id);
                     }
                     Thread.Sleep(intervalo);
@@ -211,7 +233,6 @@ namespace WpfApp1
             catch (Exception ex)
             {
                 
-                //MessageBox.Show("Não foi possível encaminhar o arquivo\n Verifique se o número de telefone está correto", "Atenção");
                 using (var msg = new TRI_PDV_WHATSTableAdapter())
                 {
                     msg.Connection.ConnectionString = MontaStringDeConexao(Properties.Settings.Default.ServerName, Properties.Settings.Default.ServerCatalog);
@@ -222,20 +243,27 @@ namespace WpfApp1
             }
             return true;
         }
-
+        /// <summary>
+        /// Verifica os envios das mesagens e aguarda o evento de inserção de uma nova mensagem
+        /// </summary>
         public void VerificaMsg()
         {
+            //Instância um visualizador de evento remoto e pega a string de conexão da base de dados
             var novo_envio = new FbRemoteEvent(MontaStringDeConexao(Properties.Settings.Default.ServerName, Properties.Settings.Default.ServerCatalog));
-            //while ( /*Process.GetProcessesByName("AmbiPDV").Length >= 1*/)
-
+            
+            // Dentro desse bloco de comando, existem instruções que serão executadas quando o evento for realizado
             novo_envio.RemoteEventCounts += (sender, e) =>
             {
 
                 using (var ATIVOS = new TRI_PDV_WHATSTableAdapter())
                 {
+                    // Força o objeto a enxergar a string de conexão salva nas propriedades 
                     ATIVOS.Connection.ConnectionString = MontaStringDeConexao(Properties.Settings.Default.ServerName, Properties.Settings.Default.ServerCatalog);
 
+                    //Pega apenas as mensagens que não foram enviadas
                     ATIVOS.GetRegistroDeMsg(PRODATIVOS);
+                   
+                    //Para cada mensagem não enviada, faça isso
                     foreach (TRI_PDV_WHATSRow item in PRODATIVOS)
                     {
                         var num = item.NUMERO;
@@ -250,7 +278,7 @@ namespace WpfApp1
                     }
                 }
             };
-
+            //Fica em StandBy aguardando o evento com o nome (NOVA_MENSAGEM) 
             novo_envio.QueueEvents("NOVA_MENSAGEM");
 
         }
